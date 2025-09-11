@@ -1,0 +1,8 @@
+jinja2
+matplotlib
+tensorflow
+keras
+numpy
+pandas
+scikit-learn
+seaborn

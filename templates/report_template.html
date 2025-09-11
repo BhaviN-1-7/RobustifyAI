@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>📊 Model Evaluation Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    h1 { color: #2c3e50; }
+    table { border-collapse: collapse; margin: 1em 0; width: 60%; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+    th { background: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>📊 Model Evaluation Report</h1>
+  <p><b>Seed:</b> {{ report.seed }}</p>
+
+  <h2>Environment</h2>
+  <ul>
+    <li>Python: {{ report.steps.env.python }}</li>
+    {% for lib, ver in report.steps.env.lib_versions.items() %}
+      <li>{{ lib }}: {{ ver }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Dataset Summary</h2>
+  <table>
+    <tr><th>Class</th><th>Count</th></tr>
+    {% for cls, count in report.steps.data_list.classes.items() %}
+      <tr><td>{{ cls }}</td><td>{{ count }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Metrics</h2>
+  <p>Accuracy: {{ report.steps.metrics.accuracy }}</p>
+  {% if report.steps.metrics.precision %}
+  <table>
+    <tr><th>Class</th><th>Precision</th><th>Recall</th></tr>
+    {% for cls, prec in report.steps.metrics.precision.items() %}
+      <tr>
+        <td>{{ cls }}</td>
+        <td>{{ prec }}</td>
+        <td>{{ report.steps.metrics.recall[cls] }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p>No precision/recall data yet.</p>
+  {% endif %}
+
+  <h2>Robustness</h2>
+  {% if report.steps.robustness %}
+    <ul>
+      {% for corruption, acc in report.steps.robustness.items() %}
+        <li>{{ corruption }} → {{ acc }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No robustness data yet.</p>
+  {% endif %}
+
+  {% if report.steps.plots is defined and report.steps.plots.confusion_matrix is defined %}
+    <h2>Confusion Matrix</h2>
+    <img src="{{ report.steps.plots.confusion_matrix }}" alt="Confusion Matrix" style="max-width:400px;">
+  {% endif %}
+
+  {% if report.steps.plots is defined and report.steps.plots.robustness is defined %}
+    <h2>Robustness Tests</h2>
+    <p>Accuracy under different corruptions:</p>
+    <img src="{{ report.steps.plots.robustness }}" alt="Robustness Plot" style="max-width:500px;">
+  {% endif %}
+
+  <h2>Efficiency</h2>
+  <ul>
+    <li>Params: {{ report.steps.efficiency.params }}</li>
+    <li>Model size: {{ report.steps.efficiency.model_size_mb }} MB</li>
+    <li>Latency: {{ report.steps.efficiency.latency_ms }} ms</li>
+  </ul>
+</body>
+</html>

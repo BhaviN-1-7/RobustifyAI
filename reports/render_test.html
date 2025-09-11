@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>📊 Model Evaluation Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    h1 { color: #2c3e50; }
+    table { border-collapse: collapse; margin: 1em 0; width: 60%; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+    th { background: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>📊 Model Evaluation Report</h1>
+  <p><b>Seed:</b> 1234</p>
+
+  <h2>Environment</h2>
+  <ul>
+    <li>Python: 3.8.10</li>
+    
+      <li>numpy: 1.24</li>
+    
+      <li>tensorflow: 2.12</li>
+    
+  </ul>
+
+  <h2>Dataset Summary</h2>
+  <table>
+    <tr><th>Class</th><th>Count</th></tr>
+    
+      <tr><td>cats</td><td>2</td></tr>
+    
+      <tr><td>dogs</td><td>2</td></tr>
+    
+  </table>
+
+  <h2>Metrics</h2>
+  <p>Accuracy: 0.5</p>
+  
+  <table>
+    <tr><th>Class</th><th>Precision</th><th>Recall</th></tr>
+    
+      <tr>
+        <td>cats</td>
+        <td>0.5</td>
+        <td>0.5</td>
+      </tr>
+    
+      <tr>
+        <td>dogs</td>
+        <td>0.5</td>
+        <td>0.5</td>
+      </tr>
+    
+  </table>
+  
+
+  <h2>Robustness</h2>
+  
+    <ul>
+      
+        <li>gaussian_noise → 0.4</li>
+      
+    </ul>
+  
+
+  
+
+  
+
+  <h2>Efficiency</h2>
+  <ul>
+    <li>Params: 123456</li>
+    <li>Model size: 1.2 MB</li>
+    <li>Latency: 12.3 ms</li>
+  </ul>
+</body>
+</html>
