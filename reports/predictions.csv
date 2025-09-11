@@ -1,5 +1,3 @@
-true,pred
-cats,dogs
-cats,dogs
-dogs,dogs
-dogs,dogs
+file,true,pred
+./dataset\cats\cat1.jpg,cats,dogs
+./dataset\dogs\dog1.jpg,dogs,dogs
