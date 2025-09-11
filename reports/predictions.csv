@@ -1,3 +1,11 @@
 file,true,pred
-./dataset\cats\cat1.jpg,cats,dogs
-./dataset\dogs\dog1.jpg,dogs,dogs
+./dataset\dogs\img_36.png,dogs,cats
+./dataset\cats\img_31.png,cats,cats
+./dataset\cats\img_9.png,cats,cats
+./dataset\dogs\img_27.png,dogs,cats
+./dataset\dogs\img_43.png,dogs,cats
+./dataset\dogs\img_4.png,dogs,cats
+./dataset\cats\img_41.png,cats,cats
+./dataset\cats\img_22.png,cats,cats
+./dataset\dogs\img_40.png,dogs,cats
+./dataset\cats\img_14.png,cats,cats

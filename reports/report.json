@@ -15,59 +15,67 @@
     },
     "data_list": {
       "classes": {
-        "cats": 2,
-        "dogs": 2
+        "cats": 24,
+        "dogs": 26
       }
     },
     "split": {
       "test_size": 0.2,
       "seed": 1234,
-      "n_train": 2,
-      "n_test": 2
+      "n_train": 40,
+      "n_test": 10
     },
     "metrics": {
       "accuracy": 0.5,
       "precision": {
-        "cats": 0.0,
-        "dogs": 0.5
+        "cats": 0.5,
+        "dogs": 0.0
       },
       "recall": {
-        "cats": 0.0,
-        "dogs": 1.0
+        "cats": 1.0,
+        "dogs": 0.0
       },
       "f1": {
-        "cats": 0.0,
-        "dogs": 0.6666666666666666
+        "cats": 0.6666666666666666,
+        "dogs": 0.0
       }
     },
     "baseline": {
-      "accuracy": 0.5,
+      "accuracy": 0.4,
       "precision": [
-        0.5,
-        0.0
+        0.4,
+        0.4
       ],
       "recall": [
-        1.0,
-        0.0
+        0.4,
+        0.4
       ],
       "f1": [
-        0.6666666666666666,
-        0.0
+        0.4000000000000001,
+        0.4000000000000001
       ],
       "y_pred": [
         0,
-        0
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        1,
+        1
       ]
     },
     "stats_test": {
-      "observed_diff": 0.0,
+      "observed_diff": 0.1,
       "p_value": 1.0
     },
     "robustness": {},
     "efficiency": {
-      "params": 31202,
-      "model_size_mb": 0.38,
-      "latency_s_per_image": 0.176139
+      "params": 461825,
+      "model_size_mb": 5.32,
+      "latency_s_per_image": 0.035983
     },
     "plots": {}
   }
