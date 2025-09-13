@@ -1,80 +1,170 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>📊 Model Evaluation Report</title>
+  <meta charset="UTF-8">
+  <title>Model Evaluation Report</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    h1 { color: #2c3e50; }
-    table { border-collapse: collapse; margin: 1em 0; width: 60%; }
-    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
-    th { background: #f4f4f4; }
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #e0e0e0, #f8f8f8);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px auto;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      max-width: 1000px;
+    }
+    .metrics-table, .env-table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .metrics-table th, .metrics-table td,
+    .env-table th, .env-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    .metrics-table th, .env-table th {
+      background-color: #f2f2f2;
+    }
+    img {
+      max-width: 100%;
+      display: block;
+      margin: 10px auto;
+      border-radius: 8px;
+    }
+    .section-title {
+      border-left: 6px solid #3498db;
+      padding-left: 10px;
+      margin-bottom: 10px;
+    }
+    .small-text {
+      font-size: 0.9em;
+      color: #666;
+    }
   </style>
 </head>
 <body>
-  <h1>📊 Model Evaluation Report</h1>
-  <p><b>Seed:</b> {{ report.seed }}</p>
 
-  <h2>Environment</h2>
-  <ul>
-    <li>Python: {{ report.steps.env.python }}</li>
-    {% for lib, ver in report.steps.env.lib_versions.items() %}
-      <li>{{ lib }}: {{ ver }}</li>
-    {% endfor %}
-  </ul>
+  <div class="card">
+    <h1>📊 Model Evaluation Report</h1>
+    <p class="small-text">
+      Seed: {{ report.seed }} • Python {{ report.steps.env.python }}
+    </p>
+  </div>
 
-  <h2>Dataset Summary</h2>
-  <table>
-    <tr><th>Class</th><th>Count</th></tr>
-    {% for cls, count in report.steps.data_list.classes.items() %}
-      <tr><td>{{ cls }}</td><td>{{ count }}</td></tr>
-    {% endfor %}
-  </table>
+  <div class="card">
+    <h2 class="section-title">⚙️ Environment</h2>
+    <table class="env-table">
+      <tr><th>Library</th><th>Version</th></tr>
+      {% for lib, ver in report.steps.env.lib_versions.items() %}
+      <tr><td>{{ lib }}</td><td>{{ ver }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
 
-  <h2>Metrics</h2>
-  <p>Accuracy: {{ report.steps.metrics.accuracy }}</p>
-  {% if report.steps.metrics.precision %}
-  <table>
-    <tr><th>Class</th><th>Precision</th><th>Recall</th></tr>
-    {% for cls, prec in report.steps.metrics.precision.items() %}
+  <div class="card">
+    <h2 class="section-title">📂 Dataset Summary</h2>
+    <pre>{{ report.steps.data_list | tojson(indent=2) }}</pre>
+    <p><b>Split Info:</b> {{ report.steps.split }}</p>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">📈 Metrics</h2>
+    <table class="metrics-table">
+      <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr>
+      {% for cls, prec in report.steps.metrics.precision.items() %}
       <tr>
         <td>{{ cls }}</td>
-        <td>{{ prec }}</td>
-        <td>{{ report.steps.metrics.recall[cls] }}</td>
+        <td>{{ '%.3f' % prec }}</td>
+        <td>{{ '%.3f' % report.steps.metrics.recall[cls] }}</td>
+        <td>{{ '%.3f' % report.steps.metrics.f1[cls] }}</td>
+        <td>{{ report.steps.metrics.support[cls] }}</td>
       </tr>
-    {% endfor %}
-  </table>
-  {% else %}
-    <p>No precision/recall data yet.</p>
-  {% endif %}
-
-  <h2>Robustness</h2>
-  {% if report.steps.robustness %}
-    <ul>
-      {% for corruption, acc in report.steps.robustness.items() %}
-        <li>{{ corruption }} → {{ acc }}</li>
       {% endfor %}
+    </table>
+    <p>
+      <b>Accuracy:</b> {{ '%.3f' % report.steps.metrics.accuracy }}
+      (95% CI: {{ '%.3f' % report.steps.metrics.accuracy_ci.lower }} – {{ '%.3f' % report.steps.metrics.accuracy_ci.upper }})
+    </p>
+    <p>
+      <b>Macro F1:</b> {{ '%.3f' % report.steps.metrics.macro.f1 }} • 
+      <b>Micro F1:</b> {{ '%.3f' % report.steps.metrics.micro.f1 }}
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">📊 Confusion Matrix</h2>
+    {% if report.steps.plots.confusion_matrix %}
+      <img src="{{ report.steps.plots.confusion_matrix }}" alt="Confusion Matrix">
+    {% else %}
+      <p>No confusion matrix available</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">📉 ROC & PR Curves</h2>
+    <h3>ROC Scores</h3>
+    <table class="metrics-table">
+      <tr><th>Class</th><th>ROC AUC</th></tr>
+      {% for cls, val in report.steps.roc.per_class.items() %}
+      <tr><td>{{ cls }}</td><td>{% if val %}{{ '%.3f' % val }}{% else %}-{% endif %}</td></tr>
+      {% endfor %}
+      <tr><td><b>Macro</b></td><td>{{ report.steps.roc.macro }}</td></tr>
+    </table>
+    {% if report.steps.plots.roc %}
+      <img src="{{ report.steps.plots.roc }}" alt="ROC Curves">
+    {% endif %}
+
+    <h3>PR Scores</h3>
+    <table class="metrics-table">
+      <tr><th>Class</th><th>PR AUC</th></tr>
+      {% for cls, val in report.steps.pr.per_class.items() %}
+      <tr><td>{{ cls }}</td><td>{% if val %}{{ '%.3f' % val }}{% else %}-{% endif %}</td></tr>
+      {% endfor %}
+      <tr><td><b>Macro</b></td><td>{{ report.steps.pr.macro }}</td></tr>
+    </table>
+    {% if report.steps.plots.pr %}
+      <img src="{{ report.steps.plots.pr }}" alt="PR Curves">
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🎯 Calibration</h2>
+    <p>Brier Score: {{ report.steps.calibration.brier }} • ECE: {{ report.steps.calibration.ece }}</p>
+    {% if report.steps.plots.calibration %}
+      <img src="{{ report.steps.plots.calibration }}" alt="Calibration Plot">
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🛡️ Robustness Tests</h2>
+    <pre>{{ report.steps.robustness | tojson(indent=2) }}</pre>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">⚖️ Baseline vs Model</h2>
+    <p><b>Baseline Accuracy:</b> {{ report.steps.baseline.accuracy }}</p>
+    <p><b>Permutation Test:</b> Δ = {{ report.steps.stats_test.observed_diff }}, p = {{ report.steps.stats_test.p_value }}</p>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">⚡ Efficiency</h2>
+    <ul>
+      <li>Params: {{ report.steps.efficiency.params }}</li>
+      <li>Model Size (MB): {{ report.steps.efficiency.model_size_mb }}</li>
+      <li>Latency (s/img): {{ report.steps.efficiency.latency_s_per_image }}</li>
     </ul>
-  {% else %}
-    <p>No robustness data yet.</p>
-  {% endif %}
+  </div>
 
-  {% if report.steps.plots is defined and report.steps.plots.confusion_matrix is defined %}
-    <h2>Confusion Matrix</h2>
-    <img src="{{ report.steps.plots.confusion_matrix }}" alt="Confusion Matrix" style="max-width:400px;">
-  {% endif %}
-
-  {% if report.steps.plots is defined and report.steps.plots.robustness is defined %}
-    <h2>Robustness Tests</h2>
-    <p>Accuracy under different corruptions:</p>
-    <img src="{{ report.steps.plots.robustness }}" alt="Robustness Plot" style="max-width:500px;">
-  {% endif %}
-
-  <h2>Efficiency</h2>
-  <ul>
-    <li>Params: {{ report.steps.efficiency.params }}</li>
-    <li>Model size: {{ report.steps.efficiency.model_size_mb }} MB</li>
-    <li>Latency: {{ report.steps.efficiency.latency_s_per_image }} s/img</li>
-  </ul>
 </body>
 </html>
