@@ -28,6 +28,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import Counter
 from PIL import Image, ImageFilter, ImageOps
+#added by me
+import psutil
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -276,77 +278,104 @@ def paired_permutation_test_binary_correct(y_true, y_pred_model, y_pred_baseline
 # -------------------------
 # Calibration: Brier + ECE (equal-width bins)
 # -------------------------
+# -------------------------
+# Calibration: Brier + ECE (equal-width bins) with extended plots
+# -------------------------
 def calibration_metrics_and_plot(y_true, y_probs, n_bins=10):
     """
-    y_probs: shape (N, n_classes) or (N,) for binary single-column
-    returns: brier_score (overall), ece, calib_plot_b64 (image or None)
+    Extended calibration metrics:
+    - Brier score
+    - Expected Calibration Error (ECE)
+    - Calibration curve (reliability diagram)
+    - Confidence histogram
+    - Predictive entropy histogram
     """
     try:
+        import matplotlib.pyplot as plt
+        from sklearn.metrics import brier_score_loss
+        import io, base64
+
         y_true = np.asarray(y_true)
         y_probs = np.asarray(y_probs)
         n = len(y_true)
         if n == 0:
-            return None, None, None
+            return None, None, None, None, None
 
-        # For multiclass, compute Brier as mean squared error of one-hot - probs (sum across classes)
+        # ----- Handle binary vs multiclass -----
         if y_probs.ndim == 2 and y_probs.shape[1] > 1:
-            # brier per sample = sum((y_onehot - probs)^2)
+            # multiclass
             y_onehot = np.zeros_like(y_probs)
             y_onehot[np.arange(n), y_true] = 1
             brier = float(np.mean(np.sum((y_onehot - y_probs) ** 2, axis=1)))
-            # ECE: use max prob as confidence and predicted label
             confidences = np.max(y_probs, axis=1)
             preds = np.argmax(y_probs, axis=1)
             correctness = (preds == y_true).astype(int)
         else:
-            # binary single-col or (N,1)
-            if y_probs.ndim > 1 and y_probs.shape[1] == 1:
-                probs = expit(y_probs).ravel()
-            elif y_probs.ndim == 1:
-                probs = expit(y_probs).ravel() if np.any(np.abs(y_probs) > 1) else y_probs.ravel()
+            # binary
+            if y_probs.ndim > 1:
+                probs = y_probs[:, 0]
             else:
-                probs = y_probs.ravel()
+                probs = y_probs
             brier = float(brier_score_loss(y_true, probs))
             confidences = probs
             preds = (probs >= 0.5).astype(int)
             correctness = (preds == y_true).astype(int)
 
-        # ECE
+        # ----- ECE -----
         bins = np.linspace(0.0, 1.0, n_bins + 1)
         ece = 0.0
-        bin_counts = []
-        bin_conf = []
-        bin_acc = []
+        bin_acc, bin_conf = [], []
         for i in range(n_bins):
-            lo = bins[i]; hi = bins[i+1]
-            mask = (confidences >= lo) & (confidences < hi) if i < n_bins - 1 else (confidences >= lo) & (confidences <= hi)
-            if np.sum(mask) == 0:
-                bin_counts.append(0)
-                bin_conf.append(None)
-                bin_acc.append(None)
-                continue
-            bin_confidence = float(np.mean(confidences[mask]))
-            bin_accuracy = float(np.mean(correctness[mask]))
-            bin_counts.append(int(np.sum(mask)))
-            bin_conf.append(bin_confidence)
-            bin_acc.append(bin_accuracy)
-            ece += (np.sum(mask) / n) * abs(bin_accuracy - bin_confidence)
+            lo, hi = bins[i], bins[i+1]
+            mask = (confidences >= lo) & (confidences < hi if i < n_bins-1 else confidences <= hi)
+            if np.sum(mask) > 0:
+                acc = np.mean(correctness[mask])
+                conf = np.mean(confidences[mask])
+                ece += (np.sum(mask) / n) * abs(acc - conf)
+                bin_acc.append(acc)
+                bin_conf.append(conf)
 
-        # calibration plot
-        fig, ax = plt.subplots(figsize=(6,4))
-        # plot perfect calibration line
-        ax.plot([0,1],[0,1], "k--", linewidth=0.7)
-        # scatter bin acc vs bin conf
-        xs = [b for b in bin_conf if b is not None]
-        ys = [a for a in bin_acc if a is not None]
-        ax.scatter(xs, ys)
-        ax.set_xlabel("Confidence"); ax.set_ylabel("Accuracy"); ax.set_title("Calibration plot")
-        buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches="tight"); buf.seek(0)
-        calib_img_b64 = base64.b64encode(buf.read()).decode("utf-8"); plt.close(fig)
-        return float(brier), float(ece), f"data:image/png;base64,{calib_img_b64}"
+        # ----- Predictive entropy -----
+        if y_probs.ndim == 2 and y_probs.shape[1] > 1:
+            entropy = -np.sum(y_probs * np.log(y_probs + 1e-12), axis=1)
+        else:
+            entropy = -(confidences*np.log(confidences+1e-12) + (1-confidences)*np.log(1-confidences+1e-12))
+
+        # ----- Plot (Calibration curve + histograms) -----
+        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+        # Calibration curve
+        axes[0].plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfectly calibrated")
+        if bin_conf and bin_acc:
+            axes[0].plot(bin_conf, bin_acc, marker="o", linestyle="-", color="#38bdf8", label="Model")
+        axes[0].set_title("Calibration Curve")
+        axes[0].set_xlabel("Confidence")
+        axes[0].set_ylabel("Accuracy")
+        axes[0].legend()
+
+        # Confidence histogram
+        axes[1].hist(confidences, bins=10, range=(0, 1), color="#818cf8", alpha=0.8)
+        axes[1].set_title("Confidence Distribution")
+        axes[1].set_xlabel("Confidence")
+        axes[1].set_ylabel("Count")
+
+        # Entropy histogram
+        axes[2].hist(entropy, bins=10, color="#f87171", alpha=0.8)
+        axes[2].set_title("Predictive Entropy")
+        axes[2].set_xlabel("Entropy")
+        axes[2].set_ylabel("Count")
+
+        plt.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", bbox_inches="tight")
+        buf.seek(0)
+        calib_img_b64 = base64.b64encode(buf.read()).decode("utf-8")
+        plt.close(fig)
+
+        return float(brier), float(ece), f"data:image/png;base64,{calib_img_b64}", confidences.tolist(), entropy.tolist()
     except Exception as e:
         logging.warning("Calibration computation failed: %s", e)
-        return None, None, None
+        return None, None, None, None, None
 
 
 # -------------------------
@@ -380,6 +409,13 @@ def apply_occlusion(img_arr, box_size_ratio=0.2):
     img2 = img_arr.copy()
     img2[top:top+box_h, left:left+box_w, :] = 0.0
     return img2
+
+
+# by me
+def get_peak_memory():
+    process = psutil.Process(os.getpid())
+    mem = process.memory_info().rss / (1024 * 1024)  # Convert bytes to MB
+    return round(mem, 2)
 
 
 # -------------------------
@@ -542,10 +578,11 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
 
     # calibration metrics
     try:
-        brier, ece, calib_plot_b64 = calibration_metrics_and_plot(y_test_arr, y_probs, n_bins=10)
+        brier, ece, calib_plot_b64, confidences_list, entropy_list = calibration_metrics_and_plot(y_test_arr, y_probs, n_bins=10)
     except Exception as e:
         logging.warning("Calibration step failed: %s", e)
-        brier, ece, calib_plot_b64 = None, None, None
+        brier, ece, calib_plot_b64, confidences_list, entropy_list = None, None, None, [], []
+
 
     # robustness tests (run small quick corruptions at one level)
     robustness_results = {}
@@ -591,7 +628,10 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
         robustness_results = {}
 
     # explainability placeholders
-    explanation_results = {"gradcam": None, "integrated_gradients": None}
+    # explainability placeholders
+    # changed by me
+    explanation_results = {"gradcam": None, "integrated_gradients": None, "overlap": None}
+
     # (Implementations of Grad-CAM and IG typically require model internals and will be added if requested.)
 
     # efficiency metrics
@@ -600,6 +640,8 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
     except Exception:
         params = None
     model_size_mb = round(os.path.getsize(model_path) / (1024 * 1024), 2) if os.path.exists(model_path) else None
+    peak_memory_mb = get_peak_memory()
+    quantization_note = "Quantization and pruning were not applied in this evaluation."
 
     # assemble report_data
     report_data = {
@@ -623,13 +665,21 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
             "confusion_matrix": None,
             "roc": roc_scores,
             "pr": pr_scores,
-            "calibration": {"brier": brier, "ece": ece},
+            "calibration": {
+                "brier": float(brier) if brier is not None else None,
+                "ece": float(ece) if ece is not None else None,
+                "confidences_sample": confidences_list[:500] if confidences_list else [],
+                "entropy_sample": entropy_list[:500] if entropy_list else []
+            },
+
             "robustness": robustness_results,
             "explainability": explanation_results,
             "efficiency": {
                 "params": params,
                 "model_size_mb": model_size_mb,
-                "latency_s_per_image": float(avg_time) if avg_time is not None else None
+                "latency_s_per_image": float(avg_time) if avg_time is not None else None,
+                "peak_memory_mb": peak_memory_mb,
+                "quantization_note": quantization_note
             },
             "plots": {
                 "confusion_matrix": cm_plot_b64,

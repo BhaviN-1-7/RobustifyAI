@@ -63,7 +63,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">⚙️ Environment</h2>
+    <h2 class="section-title">⚙ Environment</h2>
     <table class="env-table">
       <tr><th>Library</th><th>Version</th></tr>
       {% for lib, ver in report.steps.env.lib_versions.items() %}
@@ -147,12 +147,12 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">🛡️ Robustness Tests</h2>
+    <h2 class="section-title">🛡 Robustness Tests</h2>
     <pre>{{ report.steps.robustness | tojson(indent=2) }}</pre>
   </div>
 
   <div class="card">
-    <h2 class="section-title">⚖️ Baseline vs Model</h2>
+    <h2 class="section-title">⚖ Baseline vs Model</h2>
     <p><b>Baseline Accuracy:</b> {{ report.steps.baseline.accuracy }}</p>
     <p><b>Permutation Test:</b> Δ = {{ report.steps.stats_test.observed_diff }}, p = {{ report.steps.stats_test.p_value }}</p>
   </div>
@@ -165,6 +165,128 @@
       <li>Latency (s/img): {{ report.steps.efficiency.latency_s_per_image }}</li>
     </ul>
   </div>
+
+
+  <!-- Vibhu did -->
+  <div class="card">
+    <h2 class="section-title">🔍 Bootstrap CI/h2>
+      <p>
+        <b>Accuracy:</b> {{ '%.3f' % report.steps.metrics.accuracy }}
+        (95% CI: {{ '%.3f' % report.steps.metrics.accuracy_ci.lower }} – {{ '%.3f' % report.steps.metrics.accuracy_ci.upper }})
+      </p>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="section-title">🛡 Robustness Tests</h2>
+    <p><b>Clean Accuracy (sampled):</b> {{ report.steps.robustness.clean_acc_sample }}</p>
+    <table class="metrics-table">
+      <tr><th>Corruption Type</th><th>Accuracy</th></tr>
+      <tr><td>Gaussian Noise</td><td>{{ '%.3f' % report.steps.robustness.gaussian_noise_acc }}</td></tr>
+      <tr><td>Gaussian Blur</td><td>{{ '%.3f' % report.steps.robustness.blur_acc }}</td></tr>
+      <tr><td>JPEG Compression</td><td>{{ '%.3f' % report.steps.robustness.jpeg_acc }}</td></tr>
+      <tr><td>Occlusion</td><td>{{ '%.3f' % report.steps.robustness.occlusion_acc }}</td></tr>
+    </table>
+  
+    <h3>📊 Degradation Curve</h3>
+    <canvas id="robustnessChart" width="600" height="400"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const ctx = document.getElementById('robustnessChart').getContext('2d');
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Clean', 'Gaussian Noise', 'Gaussian Blur', 'JPEG Compression', 'Occlusion'],
+          datasets: [{
+            label: 'Accuracy',
+            data: [
+              {{ report.steps.robustness.clean_acc_sample }},
+              {{ report.steps.robustness.gaussian_noise_acc }},
+              {{ report.steps.robustness.blur_acc }},
+              {{ report.steps.robustness.jpeg_acc }},
+              {{ report.steps.robustness.occlusion_acc }}
+            ],
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 1
+            }
+          },
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    </script>
+  </div>
+
+
+  <div class="card">
+    <h2 class="section-title">🧠 Explainability</h2>
+  
+    <h3>Grad-CAM Attribution Map</h3>
+    {% if report.steps.explainability.gradcam %}
+      <img src="{{ report.steps.explainability.gradcam }}" alt="Grad-CAM Map">
+    {% else %}
+      <p>No Grad-CAM map available</p>
+    {% endif %}
+  
+    <h3>Integrated Gradients Attribution Map</h3>
+    {% if report.steps.explainability.integrated_gradients %}
+      <img src="{{ report.steps.explainability.integrated_gradients }}" alt="Integrated Gradients Map">
+    {% else %}
+      <p>No Integrated Gradients map available</p>
+    {% endif %}
+  
+    <h3>Overlapping Coefficient (Mean per Class)</h3>
+    {% if report.steps.explainability.overlap %}
+      <table class="metrics-table">
+        <tr><th>Class</th><th>Mean Overlap</th></tr>
+        {% for cls, val in report.steps.explainability.overlap.items() %}
+        <tr>
+          <td>{{ cls }}</td>
+          <td>{{ '%.3f' % val }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No overlapping coefficient data available</p>
+    {% endif %}
+  </div>
+  
+
+  <div class="card">
+    <h2 class="section-title">⚡ Efficiency</h2>
+    <ul>
+      <li>Params: {{ report.steps.efficiency.params }}</li>
+      <li>Model Size (MB): {{ report.steps.efficiency.model_size_mb }}</li>
+      <li>Latency (s/img): {{ report.steps.efficiency.latency_s_per_image }}</li>
+      <li>Peak Memory (MB): {{ report.steps.efficiency.peak_memory_mb }}</li>
+      <li>Quantization/Pruning: {{ report.steps.efficiency.quantization_note }}</li>
+    </ul>
+</div>
+
+
+<div class="card">
+  <h2 class="section-title">🎯 Calibration</h2>
+  <p><b>Brier Score:</b> {{ report.steps.calibration.brier }}</p>
+  <p><b>ECE:</b> {{ report.steps.calibration.ece }}</p>
+  {% if report.steps.plots.calibration %}
+      <img src="{{ report.steps.plots.calibration }}" alt="Calibration Plot">
+  {% endif %}
+  <h3>Sample Confidence Values</h3>
+  <pre>{{ report.steps.calibration.confidences_sample | tojson(indent=2) }}</pre>
+  <h3>Sample Entropy Values</h3>
+  <pre>{{ report.steps.calibration.entropy_sample | tojson(indent=2) }}</pre>
+</div>
 
 </body>
 </html>
