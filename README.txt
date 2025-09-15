@@ -15,7 +15,7 @@ conda activate evalenv
 pip install -r requirements.txt
 
 3. Run evaluation
-python3.8 run_evaluation.py --dataset dataset_dir --model model.h5 --out reports --seed 1234
+ python run_evaluation.py --dataset ./dataset --model ./models/catsdogs_model.h5 --out ./reports --seed 1234
 
 4. Open report
 Open reports/report.html in your browser
