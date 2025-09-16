@@ -83,6 +83,38 @@ cd ../holo-viz
 npm install
 ```
 
+## 📸 Interface Screenshots
+
+### Model Upload Interface
+![Model Page 1](explanation/ModelPage1.png)
+*Model upload and configuration interface*
+
+![Model Page 2](explanation/ModelPage2.png)
+*Model details and parameter settings*
+
+### Terminal Interface
+![Terminal Page](explanation/TerminalPage.png)
+*Command-line evaluation interface and logs*
+
+### Dashboard Interface
+![Dashboard Page 1](explanation/DashBoardPage1.png)
+*Main dashboard showing evaluation progress and results*
+
+![Dashboard Page 2](explanation/DashBoardPage2.png)
+*Detailed metrics and confusion matrix visualization*
+
+![Dashboard Page 3](explanation/DashBoardPage3.png)
+*Robustness testing and performance analysis*
+
+![Dashboard Page 4](explanation/DashBoardPage4.png)
+*Model efficiency and explainability results*
+
+### Sample Report
+![Sample Report](explanation/SampleReport.png)
+*Generated HTML evaluation report*
+
+**🔗 [View Live Sample Report](RobustifyAI/reports/report.html)**
+
 ## 🚀 Usage
 
 ### Method 1: Web Interface (Recommended)
