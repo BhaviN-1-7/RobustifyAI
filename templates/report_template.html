@@ -181,7 +181,7 @@ body.dark-mode .summary-card {
 
   <!-- ===== Title Card ===== -->
   <div class="card">
-    <h1>📊 Model Evaluation Report</h1>
+    <h1>Model Evaluation Report</h1>
     <p class="small-text">
       Seed: {{ report.seed }} • Python {{ report.steps.env.python }}
     </p>
@@ -251,7 +251,7 @@ body.dark-mode .summary-card {
   
   <!-- ===== Metrics Section ===== -->
   <div class="card">
-    <h2 class="section-title">📈 Metrics</h2>
+    <h2 class="section-title">Metrics</h2>
     <table class="metrics-table">
       <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr>
       {% for cls, prec in report.steps.metrics.precision.items() %}
@@ -276,7 +276,7 @@ body.dark-mode .summary-card {
 
   <!-- ===== Confusion Matrix Section ===== -->
   <div class="card">
-    <h2 class="section-title">📊 Confusion Matrix</h2>
+    <h2 class="section-title">Confusion Matrix</h2>
     {% if report.steps.plots.confusion_matrix %}
       <img src="{{ report.steps.plots.confusion_matrix }}" alt="Confusion Matrix">
       {% if report.steps.confusion_matrix %}
@@ -337,7 +337,7 @@ body.dark-mode .summary-card {
   </div>
 
   <div class="card">
-    <h2 class="section-title">📊 Statistical Reporting</h2>
+    <h2 class="section-title">Statistical Reporting</h2>
     <table class="metrics-table">
       <tr><th>Metric</th><th>Value</th></tr>
       <tr>
@@ -407,7 +407,7 @@ body.dark-mode .summary-card {
       <tr><td>JPEG Compression</td><td>{{ '%.3f' % report.steps.robustness.jpeg_acc }}</td></tr>
       <tr><td>Occlusion</td><td>{{ '%.3f' % report.steps.robustness.occlusion_acc }}</td></tr>
     </table>
-    <h3 style="margin-top:12px;">📊 Degradation Curve</h3>
+    <h3 style="margin-top:12px;">Degradation Curve</h3>
     <canvas id="robustnessChart" width="600" height="400" style="max-width:700px; display:block; margin: 8px auto;"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -447,49 +447,29 @@ body.dark-mode .summary-card {
 
   <!-- ===== Explainability Section ===== -->
   <div class="card">
-    <h2 class="section-title">🧠 Explainability</h2>
-
-    <h3>Grad-CAM Attribution Maps</h3>
-    {% if report.steps.explainability.gradcam %}
-      {% for heat in report.steps.explainability.gradcam %}
-        <img src="{{ heat }}" alt="Grad-CAM Heatmap" style="max-width:200px; margin:5px;">
+    <h2 class="section-title">Explainability</h2>
+  
+    <h3>LIME Attribution Maps (sampled)</h3>
+    {% if report.steps.explainability.lime %}
+      {% for img in report.steps.explainability.lime %}
+        <img src="{{ img }}" alt="LIME Attribution Map">
       {% endfor %}
     {% else %}
-      <p>No Grad-CAM maps available</p>
+      <p>No LIME explanations available</p>
     {% endif %}
-
-    <h3>Integrated Gradients Maps</h3>
-    {% if report.steps.explainability.integrated_gradients %}
-      {% for ig in report.steps.explainability.integrated_gradients %}
-        <img src="{{ ig }}" alt="IG Map" style="max-width:200px; margin:5px;">
-      {% endfor %}
-    {% else %}
-      <p>No Integrated Gradients maps available</p>
-    {% endif %}
-
+  
     <h3>Stability Score</h3>
-    {% if report.steps.explainability.stability %}
-      <p>Average Stability Change: {{ '%.4f' % report.steps.explainability.stability }}</p>
+    {% if report.steps.explainability.stability is not none %}
+      <p>Stability Score: {{ '%.3f' % report.steps.explainability.stability }}</p>
     {% else %}
       <p>No stability score available</p>
     {% endif %}
-
-    <h3>Overlap Coefficient</h3>
-    {% if report.steps.explainability.overlap %}
-      <table class="metrics-table">
-        <tr><th>Class</th><th>Mean Overlap</th></tr>
-        {% for cls, val in report.steps.explainability.overlap.items() %}
-          <tr><td>{{ cls }}</td><td>{{ '%.3f' % val }}</td></tr>
-        {% endfor %}
-      </table>
-    {% else %}
-      <p>No overlap coefficient data available</p>
-    {% endif %}
   </div>
+  
 
   <!-- ===== Efficiency Section ===== -->
   <div class="card">
-    <h2 class="section-title">⚡ Efficiency</h2>
+    <h2 class="section-title">Efficiency</h2>
     <ul>
       <li>Params: {{ report.steps.efficiency.params }}</li>
       <li>Model Size (MB): {{ report.steps.efficiency.model_size_mb }}</li>

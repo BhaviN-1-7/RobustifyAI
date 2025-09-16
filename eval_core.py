@@ -447,6 +447,26 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
     np.random.seed(seed)
 
     os.makedirs(out_dir, exist_ok=True)
+    
+    # Cleanup old reports - keep only last 2 copies
+    try:
+        reports_base_dir = os.path.dirname(out_dir)
+        if os.path.exists(reports_base_dir):
+            report_dirs = [d for d in os.listdir(reports_base_dir) 
+                          if os.path.isdir(os.path.join(reports_base_dir, d)) and d != os.path.basename(out_dir)]
+            report_dirs.sort(key=lambda x: os.path.getctime(os.path.join(reports_base_dir, x)), reverse=True)
+            
+            # Keep only the 2 most recent (excluding current)
+            for old_dir in report_dirs[1:]:  # Skip the most recent one, delete the rest
+                old_path = os.path.join(reports_base_dir, old_dir)
+                try:
+                    import shutil
+                    shutil.rmtree(old_path)
+                    logging.info(f"Cleaned up old report directory: {old_path}")
+                except Exception as e:
+                    logging.warning(f"Failed to cleanup {old_path}: {e}")
+    except Exception as e:
+        logging.warning(f"Report cleanup failed: {e}")
 
     env_info = get_environment_info()
 
@@ -696,7 +716,99 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
     # -------------------------
     # Explainability computations
     # -------------------------
-    explanation_results = {"gradcam": [], "integrated_gradients": [], "overlap": {}, "stability": None}
+    explanation_results = {"lime": [], "gradcam": [], "integrated_gradients": [], "overlap": {}, "stability": None}
+
+    try:
+        from lime import lime_image
+        from skimage.segmentation import mark_boundaries
+        import matplotlib.pyplot as plt
+        import io
+        import base64
+        
+        logging.info("Starting LIME explainability analysis...")
+        explainer = lime_image.LimeImageExplainer()
+        n_samples = min(2, len(X_test))  # explain 2 random images (reduced for speed)
+        sample_idxs = np.random.choice(len(X_test), n_samples, replace=False)
+
+        lime_imgs = []
+        stability_scores = []
+
+        for i, idx in enumerate(sample_idxs):
+            logging.info(f"Processing LIME explanation {i+1}/{n_samples}")
+            try:
+                img = X_test[idx]
+                true_label = classes[int(y_test_arr[idx])]
+                pred_label = classes[int(y_pred[idx])]
+
+                def predict_fn(imgs):
+                    imgs = np.array(imgs)
+                    return model.predict(imgs, verbose=0)
+
+                # -------- First explanation --------
+                explanation = explainer.explain_instance(
+                    image=img.astype("double"),
+                    classifier_fn=predict_fn,
+                    top_labels=1,
+                    hide_color=0,
+                    num_samples=300  # reduced for speed
+                )
+
+                temp, mask1 = explanation.get_image_and_mask(
+                    label=y_pred[idx],
+                    positive_only=True,
+                    hide_rest=False,
+                    num_features=5,
+                    min_weight=0.1
+                )
+
+                img_boundaries = mark_boundaries(temp / 255.0, mask1)
+
+                # save as base64
+                fig, ax = plt.subplots()
+                ax.imshow(img_boundaries)
+                ax.set_title(f"LIME: true={true_label}, pred={pred_label}")
+                ax.axis("off")
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png", bbox_inches="tight")
+                buf.seek(0)
+                lime_b64 = base64.b64encode(buf.read()).decode("utf-8")
+                plt.close(fig)
+
+                lime_imgs.append(f"data:image/png;base64,{lime_b64}")
+
+                # -------- Stability: run again with different seed --------
+                explanation2 = explainer.explain_instance(
+                    image=img.astype("double"),
+                    classifier_fn=predict_fn,
+                    top_labels=1,
+                    hide_color=0,
+                    num_samples=300  # reduced for speed
+                )
+                _, mask2 = explanation2.get_image_and_mask(
+                    label=y_pred[idx],
+                    positive_only=True,
+                    hide_rest=False,
+                    num_features=5,
+                    min_weight=0.1
+                )
+
+                # Compute IoU between mask1 and mask2
+                inter = np.logical_and(mask1 > 0, mask2 > 0).sum()
+                union = np.logical_or(mask1 > 0, mask2 > 0).sum()
+                if union > 0:
+                    iou = inter / union
+                    stability_scores.append(iou)
+                    
+            except Exception as inner_e:
+                logging.warning(f"LIME explanation failed for sample {idx}: {inner_e}")
+                continue
+
+        explanation_results["lime"] = lime_imgs
+        explanation_results["stability"] = float(np.mean(stability_scores)) if stability_scores else None
+
+    except Exception as e:
+        logging.warning("LIME explainability failed: %s", e)
+
 
 
 
