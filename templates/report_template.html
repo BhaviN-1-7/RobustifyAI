@@ -4,57 +4,182 @@
   <meta charset="UTF-8">
   <title>Model Evaluation Report</title>
   <style>
+    /* ===== Global Styling ===== */
+    :root{
+      --bg: #f0f4f9;
+      --card-bg: #ffffff;
+      --primary: #2563eb; /* blue */
+      --accent: #0284c7;
+      --muted: #475569;
+      --text: #1e293b;
+      --card-shadow: rgba(30, 58, 138, 0.10);
+    }
+
+    html,body{
+      height:100%;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #e0e0e0, #f8f8f8);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
       margin: 0;
       padding: 20px;
-      color: #333;
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
     }
+
     h1, h2, h3 {
-      color: #2c3e50;
+      color: #1e3a8a;
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-weight: 700;
     }
+
+    /* ===== Card Styling ===== */
     .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px;
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 22px;
       margin: 20px auto;
-      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 6px 14px var(--card-shadow);
       max-width: 1000px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      border: 1px solid rgba(37,99,235,0.04);
     }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(30, 58, 138, 0.12);
+    }
+
+    /* ===== Section Title Styling ===== */
+    .section-title {
+      border-left: 6px solid var(--primary);
+      padding-left: 12px;
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+      font-weight: 600;
+      background: rgba(224,242,254,0.7);
+      border-radius: 4px;
+      display:inline-block;
+      padding:8px 12px;
+    }
+
+    /* ===== Table Styling ===== */
     .metrics-table, .env-table {
       border-collapse: collapse;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 12px;
+      font-size: 0.95rem;
+      table-layout: auto;
     }
     .metrics-table th, .metrics-table td,
     .env-table th, .env-table td {
-      border: 1px solid #ddd;
-      padding: 8px;
+      border: 1px solid #cbd5e1;
+      padding: 10px;
       text-align: center;
+      vertical-align: middle;
     }
     .metrics-table th, .env-table th {
-      background-color: #f2f2f2;
+      background-color: var(--primary);
+      color: #ffffff;
+      font-weight: 600;
     }
+    .metrics-table tr:nth-child(even) {
+      background-color: #f1f5f9;
+    }
+    .env-table th {
+      background-color: #2563eb;
+    }
+
+    /* small inline table (compact) */
+    .compact-table td, .compact-table th {
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      border-color:#e6eefc;
+    }
+
+    /* ===== Image and Chart Styling ===== */
     img {
-      max-width: 100%;
+      max-width: 90%;
       display: block;
-      margin: 10px auto;
-      border-radius: 8px;
+      margin: 15px auto;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(30,58,138,0.12);
     }
-    .section-title {
-      border-left: 6px solid #3498db;
-      padding-left: 10px;
-      margin-bottom: 10px;
-    }
+
+    /* ===== Misc Styling ===== */
     .small-text {
       font-size: 0.9em;
-      color: #666;
+      color: var(--muted);
     }
+    ul {
+      padding-left: 20px;
+    }
+    canvas {
+      margin-top: 10px;
+    }
+
+    /* responsive tweaks */
+    @media (max-width: 900px) {
+      .card { padding:16px; margin: 12px; }
+      img { max-width: 100%; }
+    }
+
+    /* highlight summary card */
+    .summary-card {
+      background:#eff6ff;
+      border-left:6px solid var(--accent);
+    }
+
+    /* table header small */
+    .table-small th { font-size: 0.9rem; padding: 8px; }
+
+    /* centering minor labels */
+    .muted { color: var(--muted); font-size: 0.95rem; }
+    /* ===== Dark Mode ===== */
+body.dark-mode {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --primary: #60a5fa; 
+  --accent: #38bdf8;
+  --muted: #cbd5e1;
+  --text: #f1f5f9;
+  --card-shadow: rgba(0,0,0,0.5);
+}
+
+body.dark-mode h1, 
+body.dark-mode h2, 
+body.dark-mode h3 {
+  color: #e2e8f0;
+}
+
+body.dark-mode .metrics-table th,
+body.dark-mode .env-table th {
+  background-color: var(--primary);
+  color: #0f172a;
+}
+
+body.dark-mode .metrics-table tr:nth-child(even) {
+  background-color: #1e293b;
+}
+
+body.dark-mode .summary-card {
+  background: #1e293b;
+  border-left: 6px solid var(--accent);
+}
+
   </style>
 </head>
 <body>
+<!-- ===== Dark Mode Toggle Button ===== -->
+<button id="darkModeToggle" 
+        style="position:fixed; top:20px; right:20px; background:none; border:none; cursor:pointer; font-size:22px;">
+  🌙
+</button>
 
+  <!-- ===== Title Card ===== -->
   <div class="card">
     <h1>📊 Model Evaluation Report</h1>
     <p class="small-text">
@@ -62,9 +187,10 @@
     </p>
   </div>
 
+  <!-- ===== Environment Section ===== -->
   <div class="card">
     <h2 class="section-title">⚙ Environment</h2>
-    <table class="env-table">
+    <table class="env-table compact-table">
       <tr><th>Library</th><th>Version</th></tr>
       {% for lib, ver in report.steps.env.lib_versions.items() %}
       <tr><td>{{ lib }}</td><td>{{ ver }}</td></tr>
@@ -72,12 +198,58 @@
     </table>
   </div>
 
+  <!-- ===== Dataset Summary Section ===== -->
   <div class="card">
     <h2 class="section-title">📂 Dataset Summary</h2>
-    <pre>{{ report.steps.data_list | tojson(indent=2) }}</pre>
+    
+    {% if report.steps.data_list.train.classes %}
+      <h3>Training Set</h3>
+      <table class="metrics-table table-small">
+        <tr><th>Class</th><th>Count</th></tr>
+        {% for cls, cnt in report.steps.data_list.train.classes.items() %}
+          <tr><td>{{ cls }}</td><td>{{ cnt }}</td></tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  
+    {% if report.steps.data_list.test.classes %}
+      <h3>Test Set</h3>
+      <table class="metrics-table table-small">
+        <tr><th>Class</th><th>Count</th></tr>
+        {% for cls, cnt in report.steps.data_list.test.classes.items() %}
+          <tr><td>{{ cls }}</td><td>{{ cnt }}</td></tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  
+    {% if report.steps.data_list.full.classes %}
+      <h3>Full Dataset</h3>
+      <table class="metrics-table table-small">
+        <tr><th>Class</th><th>Count</th></tr>
+        {% for cls, cnt in report.steps.data_list.full.classes.items() %}
+          <tr><td>{{ cls }}</td><td>{{ cnt }}</td></tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  
     <p><b>Split Info:</b> {{ report.steps.split }}</p>
   </div>
 
+  <!-- ===== Pipeline Summary Section ===== -->
+  <div class="card">
+    <h2 class="section-title">⚙ Pipeline Summary</h2>
+  
+    <p><b>Preprocessing Function:</b> {{ report.steps.preprocessing.preprocess_fn }}</p>
+    <p><b>Target Image Size:</b> {{ report.steps.preprocessing.target_size }}</p>
+  
+    <hr>
+  
+    <p><b>Model File:</b> {{ report.steps.model_info.model_path }}</p>
+    <p><b>Input Shape:</b> {{ report.steps.model_info.input_shape }}</p>
+    <p><b>Parameter Count:</b> {{ report.steps.model_info.param_count }}</p>
+  </div>
+  
+  <!-- ===== Metrics Section ===== -->
   <div class="card">
     <h2 class="section-title">📈 Metrics</h2>
     <table class="metrics-table">
@@ -102,15 +274,34 @@
     </p>
   </div>
 
+  <!-- ===== Confusion Matrix Section ===== -->
   <div class="card">
     <h2 class="section-title">📊 Confusion Matrix</h2>
     {% if report.steps.plots.confusion_matrix %}
       <img src="{{ report.steps.plots.confusion_matrix }}" alt="Confusion Matrix">
+      {% if report.steps.confusion_matrix %}
+      <h3 style="margin-top:14px;">Detailed Counts</h3>
+      <table class="metrics-table compact-table" style="max-width:700px; margin: 10px auto;">
+        <tr>
+          <th>True Positives (TP)</th>
+          <th>True Negatives (TN)</th>
+          <th>False Positives (FP)</th>
+          <th>False Negatives (FN)</th>
+        </tr>
+        <tr>
+          <td>{{ report.steps.confusion_matrix.TP }}</td>
+          <td>{{ report.steps.confusion_matrix.TN }}</td>
+          <td>{{ report.steps.confusion_matrix.FP }}</td>
+          <td>{{ report.steps.confusion_matrix.FN }}</td>
+        </tr>
+      </table>
+      {% endif %}
     {% else %}
       <p>No confusion matrix available</p>
     {% endif %}
   </div>
 
+  <!-- ===== ROC/PR Section ===== -->
   <div class="card">
     <h2 class="section-title">📉 ROC & PR Curves</h2>
     <h3>ROC Scores</h3>
@@ -125,7 +316,7 @@
       <img src="{{ report.steps.plots.roc }}" alt="ROC Curves">
     {% endif %}
 
-    <h3>PR Scores</h3>
+    <h3 style="margin-top:14px;">PR Scores</h3>
     <table class="metrics-table">
       <tr><th>Class</th><th>PR AUC</th></tr>
       {% for cls, val in report.steps.pr.per_class.items() %}
@@ -138,19 +329,7 @@
     {% endif %}
   </div>
 
-  <div class="card">
-    <h2 class="section-title">🎯 Calibration</h2>
-    <p>Brier Score: {{ report.steps.calibration.brier }} • ECE: {{ report.steps.calibration.ece }}</p>
-    {% if report.steps.plots.calibration %}
-      <img src="{{ report.steps.plots.calibration }}" alt="Calibration Plot">
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2 class="section-title">🛡 Robustness Tests</h2>
-    <pre>{{ report.steps.robustness | tojson(indent=2) }}</pre>
-  </div>
-
+  <!-- ===== Baseline & Statistical Reporting ===== -->
   <div class="card">
     <h2 class="section-title">⚖ Baseline vs Model</h2>
     <p><b>Baseline Accuracy:</b> {{ report.steps.baseline.accuracy }}</p>
@@ -158,24 +337,66 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">⚡ Efficiency</h2>
-    <ul>
-      <li>Params: {{ report.steps.efficiency.params }}</li>
-      <li>Model Size (MB): {{ report.steps.efficiency.model_size_mb }}</li>
-      <li>Latency (s/img): {{ report.steps.efficiency.latency_s_per_image }}</li>
-    </ul>
+    <h2 class="section-title">📊 Statistical Reporting</h2>
+    <table class="metrics-table">
+      <tr><th>Metric</th><th>Value</th></tr>
+      <tr>
+        <td>95% CI (Accuracy)</td>
+        <td>
+          {% if report.steps.metrics.accuracy_ci.lower and report.steps.metrics.accuracy_ci.upper %}
+            [{{ '%.3f' % report.steps.metrics.accuracy_ci.lower }},
+             {{ '%.3f' % report.steps.metrics.accuracy_ci.upper }}]
+          {% else %} N/A {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Observed Accuracy Difference</td>
+        <td>{% if report.steps.stats_test.observed_diff %}{{ '%.4f' % report.steps.stats_test.observed_diff }}{% else %}N/A{% endif %}</td>
+      </tr>
+      <tr>
+        <td>Effect Size</td>
+        <td>{% if report.steps.stats_test.effect_size is not none %}{{ '%.4f' % report.steps.stats_test.effect_size }}{% else %}N/A{% endif %}</td>
+      </tr>
+    </table>
   </div>
 
-
-  <!-- Vibhu did -->
+  <!-- ===== Calibration Section ===== -->
   <div class="card">
-    <h2 class="section-title">🔍 Bootstrap CI/h2>
-      <p>
-        <b>Accuracy:</b> {{ '%.3f' % report.steps.metrics.accuracy }}
-        (95% CI: {{ '%.3f' % report.steps.metrics.accuracy_ci.lower }} – {{ '%.3f' % report.steps.metrics.accuracy_ci.upper }})
-      </p>
-    </div>
+    <h2 class="section-title">📏 Calibration</h2>
+    {% if report.steps.calibration.brier is not none %}
+      <p><strong>Brier Score:</strong> {{ "%.4f" % report.steps.calibration.brier }}</p>
+    {% else %}
+      <p><strong>Brier Score:</strong> Not available</p>
+    {% endif %}
+  
+    {% if report.steps.calibration.ece is not none %}
+      <p><strong>ECE:</strong> {{ "%.4f" % report.steps.calibration.ece }}</p>
+    {% else %}
+      <p><strong>ECE:</strong> Not available</p>
+    {% endif %}
+  
+    {% if report.steps.calibration.mean_confidence is not none %}
+      <p><strong>Mean Confidence:</strong> {{ "%.4f" % report.steps.calibration.mean_confidence }}</p>
+    {% endif %}
+  
+    {% if report.steps.calibration.mean_entropy is not none %}
+      <p><strong>Mean Predictive Entropy:</strong> {{ "%.4f" % report.steps.calibration.mean_entropy }}</p>
+    {% endif %}
+  
+    {% if report.steps.plots.calibration_curve %}
+      <img src="{{ report.steps.plots.calibration_curve }}" alt="Calibration Curve" style="max-width:600px; margin-bottom:20px;"/>
+    {% endif %}
+  
+    {% if report.steps.plots.calibration_conf_hist %}
+      <img src="{{ report.steps.plots.calibration_conf_hist }}" alt="Confidence Distribution" style="max-width:600px; margin-bottom:20px;"/>
+    {% endif %}
+  
+    {% if report.steps.plots.calibration_entropy_hist %}
+      <img src="{{ report.steps.plots.calibration_entropy_hist }}" alt="Predictive Entropy" style="max-width:600px;"/>
+    {% endif %}
   </div>
+  
+  <!-- ===== Robustness Section ===== -->
   <div class="card">
     <h2 class="section-title">🛡 Robustness Tests</h2>
     <p><b>Clean Accuracy (sampled):</b> {{ report.steps.robustness.clean_acc_sample }}</p>
@@ -186,83 +407,87 @@
       <tr><td>JPEG Compression</td><td>{{ '%.3f' % report.steps.robustness.jpeg_acc }}</td></tr>
       <tr><td>Occlusion</td><td>{{ '%.3f' % report.steps.robustness.occlusion_acc }}</td></tr>
     </table>
-  
-    <h3>📊 Degradation Curve</h3>
-    <canvas id="robustnessChart" width="600" height="400"></canvas>
+    <h3 style="margin-top:12px;">📊 Degradation Curve</h3>
+    <canvas id="robustnessChart" width="600" height="400" style="max-width:700px; display:block; margin: 8px auto;"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      const ctx = document.getElementById('robustnessChart').getContext('2d');
-      const chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Clean', 'Gaussian Noise', 'Gaussian Blur', 'JPEG Compression', 'Occlusion'],
-          datasets: [{
-            label: 'Accuracy',
-            data: [
-              {{ report.steps.robustness.clean_acc_sample }},
-              {{ report.steps.robustness.gaussian_noise_acc }},
-              {{ report.steps.robustness.blur_acc }},
-              {{ report.steps.robustness.jpeg_acc }},
-              {{ report.steps.robustness.occlusion_acc }}
-            ],
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 1
+      (function(){
+        try {
+          const ctx = document.getElementById('robustnessChart').getContext('2d');
+          const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Clean', 'Gaussian Noise', 'Gaussian Blur', 'JPEG Compression', 'Occlusion'],
+              datasets: [{
+                label: 'Accuracy',
+                data: [
+                  {{ report.steps.robustness.clean_acc_sample }},
+                  {{ report.steps.robustness.gaussian_noise_acc }},
+                  {{ report.steps.robustness.blur_acc }},
+                  {{ report.steps.robustness.jpeg_acc }},
+                  {{ report.steps.robustness.occlusion_acc }}
+                ],
+                backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              scales: { y: { beginAtZero: true, max: 1 } },
+              responsive: true,
+              plugins: { legend: { display: false } }
             }
-          },
-          responsive: true,
-          plugins: {
-            legend: {
-              display: false
-            }
-          }
+          });
+        } catch (e) {
+          console.warn('Robustness chart rendering failed', e);
         }
-      });
+      })();
     </script>
   </div>
 
-
+  <!-- ===== Explainability Section ===== -->
   <div class="card">
     <h2 class="section-title">🧠 Explainability</h2>
-  
-    <h3>Grad-CAM Attribution Map</h3>
+
+    <h3>Grad-CAM Attribution Maps</h3>
     {% if report.steps.explainability.gradcam %}
-      <img src="{{ report.steps.explainability.gradcam }}" alt="Grad-CAM Map">
+      {% for heat in report.steps.explainability.gradcam %}
+        <img src="{{ heat }}" alt="Grad-CAM Heatmap" style="max-width:200px; margin:5px;">
+      {% endfor %}
     {% else %}
-      <p>No Grad-CAM map available</p>
+      <p>No Grad-CAM maps available</p>
     {% endif %}
-  
-    <h3>Integrated Gradients Attribution Map</h3>
+
+    <h3>Integrated Gradients Maps</h3>
     {% if report.steps.explainability.integrated_gradients %}
-      <img src="{{ report.steps.explainability.integrated_gradients }}" alt="Integrated Gradients Map">
+      {% for ig in report.steps.explainability.integrated_gradients %}
+        <img src="{{ ig }}" alt="IG Map" style="max-width:200px; margin:5px;">
+      {% endfor %}
     {% else %}
-      <p>No Integrated Gradients map available</p>
+      <p>No Integrated Gradients maps available</p>
     {% endif %}
-  
-    <h3>Overlapping Coefficient (Mean per Class)</h3>
+
+    <h3>Stability Score</h3>
+    {% if report.steps.explainability.stability %}
+      <p>Average Stability Change: {{ '%.4f' % report.steps.explainability.stability }}</p>
+    {% else %}
+      <p>No stability score available</p>
+    {% endif %}
+
+    <h3>Overlap Coefficient</h3>
     {% if report.steps.explainability.overlap %}
       <table class="metrics-table">
         <tr><th>Class</th><th>Mean Overlap</th></tr>
         {% for cls, val in report.steps.explainability.overlap.items() %}
-        <tr>
-          <td>{{ cls }}</td>
-          <td>{{ '%.3f' % val }}</td>
-        </tr>
+          <tr><td>{{ cls }}</td><td>{{ '%.3f' % val }}</td></tr>
         {% endfor %}
       </table>
     {% else %}
-      <p>No overlapping coefficient data available</p>
+      <p>No overlap coefficient data available</p>
     {% endif %}
   </div>
-  
 
+  <!-- ===== Efficiency Section ===== -->
   <div class="card">
     <h2 class="section-title">⚡ Efficiency</h2>
     <ul>
@@ -272,21 +497,52 @@
       <li>Peak Memory (MB): {{ report.steps.efficiency.peak_memory_mb }}</li>
       <li>Quantization/Pruning: {{ report.steps.efficiency.quantization_note }}</li>
     </ul>
-</div>
+  </div>
 
+  <!-- ===== Summary Section ===== -->
+  <div class="card summary-card">
+    <h2 class="section-title">📝 Summary & Notes</h2>
+    <p><b>Best Metric:</b> {{ report.steps.summary_notes.best_metric }}</p>
 
-<div class="card">
-  <h2 class="section-title">🎯 Calibration</h2>
-  <p><b>Brier Score:</b> {{ report.steps.calibration.brier }}</p>
-  <p><b>ECE:</b> {{ report.steps.calibration.ece }}</p>
-  {% if report.steps.plots.calibration %}
-      <img src="{{ report.steps.plots.calibration }}" alt="Calibration Plot">
-  {% endif %}
-  <h3>Sample Confidence Values</h3>
-  <pre>{{ report.steps.calibration.confidences_sample | tojson(indent=2) }}</pre>
-  <h3>Sample Entropy Values</h3>
-  <pre>{{ report.steps.calibration.entropy_sample | tojson(indent=2) }}</pre>
-</div>
+    {% if report.steps.summary_notes.baseline_acc %}
+    <p><b>Baseline Accuracy:</b> {{ '%.3f' % report.steps.summary_notes.baseline_acc }}</p>
+    <p><b>Observed Improvement:</b> {{ '%.4f' % report.steps.summary_notes.observed_improvement }}</p>
+    <p><b>P-Value:</b>
+      {% if report.steps.summary_notes.p_value is not none %}
+        {{ '%.4f' % report.steps.summary_notes.p_value }}
+      {% else %} N/A {% endif %}
+    </p>
+    <p><b>Effect Size:</b>
+      {% if report.steps.summary_notes.effect_size is not none %}
+        {{ '%.4f' % report.steps.summary_notes.effect_size }}
+      {% else %} N/A {% endif %}
+    </p>
+    {% endif %}
+
+    <p><b>Interpretation:</b> {{ report.steps.summary_notes.interpretation }}</p>
+  </div>
 
 </body>
+<script>
+  const toggleBtn = document.getElementById('darkModeToggle');
+  const body = document.body;
+
+  // Load saved theme
+  if (localStorage.getItem('theme') === 'dark') {
+    body.classList.add('dark-mode');
+    toggleBtn.textContent = '☀️';
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    body.classList.toggle('dark-mode');
+    if (body.classList.contains('dark-mode')) {
+      localStorage.setItem('theme', 'dark');
+      toggleBtn.textContent = '☀️';
+    } else {
+      localStorage.setItem('theme', 'light');
+      toggleBtn.textContent = '🌙';
+    }
+  });
+</script>
+
 </html>

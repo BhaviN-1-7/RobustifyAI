@@ -30,6 +30,13 @@ from collections import Counter
 from PIL import Image, ImageFilter, ImageOps
 #added by me
 import psutil
+import tensorflow as tf
+import math
+from keras.models import Model
+import tensorflow as tf
+import numpy as np
+
+
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -115,6 +122,8 @@ def plot_confusion_matrix_base64(y_true, y_pred, class_names):
     buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches="tight"); buf.seek(0)
     data = base64.b64encode(buf.read()).decode("utf-8"); plt.close(fig)
     return f"data:image/png;base64,{data}"
+
+    
 
 
 def plot_roc_pr_base64_and_scores(y_true, y_probs, class_names):
@@ -268,7 +277,8 @@ def paired_permutation_test_binary_correct(y_true, y_pred_model, y_pred_baseline
             a = np.where(mask, y_pred_model, y_pred_baseline)
             b = np.where(mask, y_pred_baseline, y_pred_model)
             diffs.append(accuracy_score(y_true, a) - accuracy_score(y_true, b))
-        p_val = float(np.mean(np.abs(diffs) >= abs(obs_diff)))
+        p_val = float((np.sum(np.abs(diffs) >= abs(obs_diff)) + 1) / (n_permutations + 1))
+
         return {"observed_diff": obs_diff, "p_value": p_val}
     except Exception as e:
         logging.warning("Permutation test failed: %s", e)
@@ -283,12 +293,12 @@ def paired_permutation_test_binary_correct(y_true, y_pred_model, y_pred_baseline
 # -------------------------
 def calibration_metrics_and_plot(y_true, y_probs, n_bins=10):
     """
-    Extended calibration metrics:
-    - Brier score
-    - Expected Calibration Error (ECE)
-    - Calibration curve (reliability diagram)
-    - Confidence histogram
-    - Predictive entropy histogram
+    Returns:
+    - brier
+    - ece
+    - (calib_curve_img, conf_hist_img, entropy_hist_img)
+    - mean_conf
+    - mean_entropy
     """
     try:
         import matplotlib.pyplot as plt
@@ -299,11 +309,10 @@ def calibration_metrics_and_plot(y_true, y_probs, n_bins=10):
         y_probs = np.asarray(y_probs)
         n = len(y_true)
         if n == 0:
-            return None, None, None, None, None
+            return None, None, (None, None, None), None, None
 
         # ----- Handle binary vs multiclass -----
         if y_probs.ndim == 2 and y_probs.shape[1] > 1:
-            # multiclass
             y_onehot = np.zeros_like(y_probs)
             y_onehot[np.arange(n), y_true] = 1
             brier = float(np.mean(np.sum((y_onehot - y_probs) ** 2, axis=1)))
@@ -311,7 +320,6 @@ def calibration_metrics_and_plot(y_true, y_probs, n_bins=10):
             preds = np.argmax(y_probs, axis=1)
             correctness = (preds == y_true).astype(int)
         else:
-            # binary
             if y_probs.ndim > 1:
                 probs = y_probs[:, 0]
             else:
@@ -341,41 +349,40 @@ def calibration_metrics_and_plot(y_true, y_probs, n_bins=10):
         else:
             entropy = -(confidences*np.log(confidences+1e-12) + (1-confidences)*np.log(1-confidences+1e-12))
 
-        # ----- Plot (Calibration curve + histograms) -----
-        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-
-        # Calibration curve
-        axes[0].plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfectly calibrated")
+        # ----- Plot Calibration Curve -----
+        fig, ax = plt.subplots(figsize=(5,4))
+        ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfectly calibrated")
         if bin_conf and bin_acc:
-            axes[0].plot(bin_conf, bin_acc, marker="o", linestyle="-", color="#38bdf8", label="Model")
-        axes[0].set_title("Calibration Curve")
-        axes[0].set_xlabel("Confidence")
-        axes[0].set_ylabel("Accuracy")
-        axes[0].legend()
-
-        # Confidence histogram
-        axes[1].hist(confidences, bins=10, range=(0, 1), color="#818cf8", alpha=0.8)
-        axes[1].set_title("Confidence Distribution")
-        axes[1].set_xlabel("Confidence")
-        axes[1].set_ylabel("Count")
-
-        # Entropy histogram
-        axes[2].hist(entropy, bins=10, color="#f87171", alpha=0.8)
-        axes[2].set_title("Predictive Entropy")
-        axes[2].set_xlabel("Entropy")
-        axes[2].set_ylabel("Count")
-
-        plt.tight_layout()
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches="tight")
-        buf.seek(0)
-        calib_img_b64 = base64.b64encode(buf.read()).decode("utf-8")
+            ax.plot(bin_conf, bin_acc, marker="o", linestyle="-", color="#38bdf8", label="Model")
+        ax.set_title("Calibration Curve")
+        ax.set_xlabel("Confidence"); ax.set_ylabel("Accuracy")
+        ax.legend()
+        buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches="tight"); buf.seek(0)
+        calib_curve_img = f"data:image/png;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
         plt.close(fig)
 
-        return float(brier), float(ece), f"data:image/png;base64,{calib_img_b64}", confidences.tolist(), entropy.tolist()
+        # ----- Plot Confidence Histogram -----
+        fig, ax = plt.subplots(figsize=(5,4))
+        ax.hist(confidences, bins=10, range=(0, 1), color="#818cf8", alpha=0.8)
+        ax.set_title("Confidence Distribution")
+        ax.set_xlabel("Confidence"); ax.set_ylabel("Count")
+        buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches="tight"); buf.seek(0)
+        conf_hist_img = f"data:image/png;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
+        plt.close(fig)
+
+        # ----- Plot Entropy Histogram -----
+        fig, ax = plt.subplots(figsize=(5,4))
+        ax.hist(entropy, bins=10, color="#f87171", alpha=0.8)
+        ax.set_title("Predictive Entropy")
+        ax.set_xlabel("Entropy"); ax.set_ylabel("Count")
+        buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches="tight"); buf.seek(0)
+        entropy_hist_img = f"data:image/png;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
+        plt.close(fig)
+
+        return float(brier), float(ece), (calib_curve_img, conf_hist_img, entropy_hist_img), float(np.mean(confidences)), float(np.mean(entropy))
     except Exception as e:
         logging.warning("Calibration computation failed: %s", e)
-        return None, None, None, None, None
+        return None, None, (None, None, None), None, None
 
 
 # -------------------------
@@ -416,6 +423,19 @@ def get_peak_memory():
     process = psutil.Process(os.getpid())
     mem = process.memory_info().rss / (1024 * 1024)  # Convert bytes to MB
     return round(mem, 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # -------------------------
@@ -489,6 +509,19 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
         input_shape = (150, 150)
     logging.info(f"Using target image size: {input_shape}")
 
+
+        # capture short description of preprocessing & model
+    preprocessing_info = {
+        "preprocess_fn": getattr(preprocess_fp, "__name__", "preprocess_fp"),
+        "target_size": input_shape
+    }
+    model_info = {
+        "model_path": os.path.basename(model_path),
+        "input_shape": input_shape,
+        "param_count": int(getattr(model, "count_params", lambda: 0)())
+    }
+
+
     # load arrays
     X_train, y_train_arr = load_images_from_files(X_train_files, y_train_labels, input_shape)
     X_test, y_test_arr = load_images_from_files(X_test_files, y_test_labels, input_shape)
@@ -555,19 +588,49 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
     baseline_metrics, baseline_clf = train_evaluate_baseline(X_train, y_train_arr, X_test, y_test_arr)
 
     # paired permutation test
-    stats_test = {"observed_diff": None, "p_value": None}
+    # paired permutation test
+    stats_test = {"observed_diff": None, "p_value": None, "effect_size": None}
     try:
         if baseline_metrics.get("y_pred"):
-            stats_test = paired_permutation_test_binary_correct(y_test_arr, y_pred, baseline_metrics.get("y_pred", []))
+            stats_test = paired_permutation_test_binary_correct(
+                y_test_arr, y_pred, baseline_metrics.get("y_pred", [])
+            )
+        # add simple effect size (difference in means)
+        if baseline_metrics.get("accuracy") is not None:
+            p1 = acc
+            p2 = baseline_metrics["accuracy"]
+            stats_test["effect_size"] = 2 * abs(math.asin(math.sqrt(p1)) - math.asin(math.sqrt(p2)))
     except Exception as e:
         logging.warning("Permutation test failed: %s", e)
 
+
+    
+
+
+
+
+
+    # confusion matrix plot
+    # try:
+    #     cm_plot_b64 = plot_confusion_matrix_base64(y_test_arr, y_pred, classes)
+    # except Exception as e:
+    #     logging.warning("Confusion matrix plotting failed: %s", e)
+    #     cm_plot_b64 = None
+
+
     # confusion matrix plot
     try:
+        cm = confusion_matrix(y_test_arr, y_pred)
         cm_plot_b64 = plot_confusion_matrix_base64(y_test_arr, y_pred, classes)
+        # compute TP, TN, FP, FN (binary only)
+        cm_stats = None
+        if cm.shape == (2, 2):
+            tn, fp, fn, tp = cm.ravel()
+            cm_stats = {"TP": int(tp), "TN": int(tn), "FP": int(fp), "FN": int(fn)}
     except Exception as e:
         logging.warning("Confusion matrix plotting failed: %s", e)
         cm_plot_b64 = None
+        cm_stats = None
 
     # ROC/PR plots and scores
     try:
@@ -578,10 +641,10 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
 
     # calibration metrics
     try:
-        brier, ece, calib_plot_b64, confidences_list, entropy_list = calibration_metrics_and_plot(y_test_arr, y_probs, n_bins=10)
+        brier, ece, (calib_curve_img, conf_hist_img, entropy_hist_img), mean_conf, mean_entropy = calibration_metrics_and_plot(y_test_arr, y_probs, n_bins=10)
     except Exception as e:
         logging.warning("Calibration step failed: %s", e)
-        brier, ece, calib_plot_b64, confidences_list, entropy_list = None, None, None, [], []
+        brier, ece, calib_curve_img, conf_hist_img, entropy_hist_img, mean_conf, mean_entropy = None, None, None, None, None, None, None
 
 
     # robustness tests (run small quick corruptions at one level)
@@ -630,9 +693,15 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
     # explainability placeholders
     # explainability placeholders
     # changed by me
-    explanation_results = {"gradcam": None, "integrated_gradients": None, "overlap": None}
+    # -------------------------
+    # Explainability computations
+    # -------------------------
+    explanation_results = {"gradcam": [], "integrated_gradients": [], "overlap": {}, "stability": None}
 
-    # (Implementations of Grad-CAM and IG typically require model internals and will be added if requested.)
+
+
+
+
 
     # efficiency metrics
     try:
@@ -643,12 +712,47 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
     peak_memory_mb = get_peak_memory()
     quantization_note = "Quantization and pruning were not applied in this evaluation."
 
+    # -------------------------
+    # Build summary and interpretation
+    # -------------------------
+    summary_notes = {}
+
+    try:
+        best_metric = f"Accuracy: {acc:.3f} (95% CI: {ci['lower']:.3f}-{ci['upper']:.3f})"
+        baseline_acc = baseline_metrics.get("accuracy", None)
+        if baseline_acc is not None:
+            improvement = acc - baseline_acc
+            significant = (stats_test.get("p_value") is not None and stats_test["p_value"] < 0.05)
+            interpretation = "✅ Statistically significant improvement over baseline." if significant else "⚠️ No significant improvement over baseline."
+        else:
+            improvement = None
+            interpretation = "Baseline unavailable – cannot compare."
+
+        summary_notes = {
+            "best_metric": best_metric,
+            "baseline_acc": baseline_acc,
+            "observed_improvement": improvement,
+            "p_value": stats_test.get("p_value", None),
+            "effect_size": stats_test.get("effect_size", None),
+            "interpretation": interpretation
+        }
+    except Exception as e:
+        logging.warning("Failed to build summary notes: %s", e)
+        summary_notes = {}
+
+
+
+
+
     # assemble report_data
     report_data = {
         "seed": int(seed),
         "steps": {
             "env": env_info,
             "data_list": data_list,
+            "preprocessing": preprocessing_info,      # 👈 ADDED
+            "model_info": model_info,  
+            "summary_notes": summary_notes,
             "split": split_info,
             "metrics": {
                 "accuracy": acc,
@@ -662,16 +766,15 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
             },
             "baseline": baseline_metrics,
             "stats_test": stats_test,
-            "confusion_matrix": None,
+            "confusion_matrix": cm_stats,
             "roc": roc_scores,
             "pr": pr_scores,
             "calibration": {
-                "brier": float(brier) if brier is not None else None,
-                "ece": float(ece) if ece is not None else None,
-                "confidences_sample": confidences_list[:500] if confidences_list else [],
-                "entropy_sample": entropy_list[:500] if entropy_list else []
+            "brier": float(brier) if brier is not None else None,
+            "ece": float(ece) if ece is not None else None,
+            "mean_confidence": float(mean_conf) if mean_conf is not None else None,
+            "mean_entropy": float(mean_entropy) if mean_entropy is not None else None
             },
-
             "robustness": robustness_results,
             "explainability": explanation_results,
             "efficiency": {
@@ -685,7 +788,9 @@ def Evaluate(dataset_dir, model_path, out_dir, seed=1234, test_ratio=0.2):
                 "confusion_matrix": cm_plot_b64,
                 "roc": (roc_plot_b64 if roc_plot_b64 else None),
                 "pr": (pr_plot_b64 if pr_plot_b64 else None),
-                "calibration": (calib_plot_b64 if calib_plot_b64 else None),
+                "calibration_curve": calib_curve_img,
+                "calibration_conf_hist": conf_hist_img,
+                "calibration_entropy_hist": entropy_hist_img,
                 # explanation list would go here if available
                 "explanations": []
             }
