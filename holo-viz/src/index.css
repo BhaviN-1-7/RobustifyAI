@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Dark sci-fi theme - AI Validation Platform */
+    --background: 220 25% 8%;
+    --foreground: 210 100% 95%;
+
+    /* Glass morphism cards */
+    --card: 220 25% 12%;
+    --card-foreground: 210 100% 95%;
+    --card-glass: 220 25% 15% / 0.8;
+    --card-border: 200 100% 60% / 0.2;
+
+    --popover: 220 25% 10%;
+    --popover-foreground: 210 100% 95%;
+
+    /* Electric blue primary */
+    --primary: 200 100% 60%;
+    --primary-foreground: 220 25% 8%;
+    --primary-glow: 200 100% 70%;
+    --primary-dark: 200 100% 45%;
+
+    /* Terminal green secondary */
+    --secondary: 120 100% 50%;
+    --secondary-foreground: 220 25% 8%;
+    --secondary-glow: 120 100% 60%;
+
+    /* Muted terminal colors */
+    --muted: 220 25% 18%;
+    --muted-foreground: 210 20% 65%;
+
+    /* Warning orange accent */
+    --accent: 30 100% 60%;
+    --accent-foreground: 220 25% 8%;
+    --accent-glow: 30 100% 70%;
+
+    /* Error red */
+    --destructive: 0 100% 65%;
+    --destructive-foreground: 210 100% 95%;
+
+    /* Borders and inputs */
+    --border: 220 25% 20%;
+    --input: 220 25% 15%;
+    --ring: 200 100% 60%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients for sci-fi feel */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--secondary-glow)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(220 25% 14%));
+    --gradient-glow: radial-gradient(circle at center, hsl(var(--primary) / 0.3), transparent 70%);
+
+    /* Shadows with glow effects */
+    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
+    --shadow-card: 0 8px 32px hsl(220 25% 5% / 0.5);
+    --shadow-terminal: inset 0 0 20px hsl(120 100% 50% / 0.1);
+
+    /* Animation easing */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* Sidebar */
+    --sidebar-background: 220 25% 10%;
+    --sidebar-foreground: 210 100% 90%;
+    --sidebar-primary: 200 100% 60%;
+    --sidebar-primary-foreground: 220 25% 8%;
+    --sidebar-accent: 220 25% 15%;
+    --sidebar-accent-foreground: 210 100% 90%;
+    --sidebar-border: 220 25% 18%;
+    --sidebar-ring: 200 100% 60%;
+  }
+
+  .dark {
+    /* Enhanced dark mode */
+    --background: 220 25% 6%;
+    --card: 220 25% 10%;
+    --muted: 220 25% 15%;
+    --border: 220 25% 18%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background: linear-gradient(135deg, hsl(var(--background)), hsl(220 25% 10%));
+    min-height: 100vh;
+  }
+
+  /* Glass morphism utility classes */
+  .glass {
+    background: hsl(var(--card-glass));
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--card-border));
+  }
+
+  .glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .terminal-glow {
+    box-shadow: var(--shadow-terminal);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: var(--radius);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: var(--radius);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary-glow));
+  }
+}
+
+@layer components {
+  /* Terminal styles */
+  .xterm .xterm-viewport {
+    background: transparent !important;
+  }
+  
+  .xterm .xterm-screen {
+    background: transparent !important;
+  }
+
+  /* Animated gradient text */
+  .gradient-text {
+    background: var(--gradient-primary);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 200%;
+    animation: gradient-flow 3s ease-in-out infinite;
+  }
+
+  @keyframes gradient-flow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Pulse animation for live indicators */
+  .pulse-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 10px hsl(var(--secondary) / 0.5);
+    }
+    50% {
+      opacity: 0.7;
+      box-shadow: 0 0 20px hsl(var(--secondary) / 0.8);
+    }
+  }
+
+  /* Hover glow effects */
+  .hover-glow {
+    transition: var(--transition-smooth);
+  }
+  
+  .hover-glow:hover {
+    box-shadow: 0 0 25px hsl(var(--primary) / 0.4);
+    transform: translateY(-2px);
+  }
+}
